@@ -1,0 +1,40 @@
+name: simple-memory-game CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14.x"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_S3_REGION }}
+
+      - name: yarn install
+        run: yarn install
+
+      - name: yarn build
+        run: yarn build
+        env:
+          CI: false
+
+      - name: clean aws s3 bucket
+        run: aws s3 rm s3://${{ secrets.AWS_S3_NAME }} --recursive
+
+      - name: deploy
+        run: aws s3 sync build/ s3://${{ secrets.AWS_S3_NAME }} --acl public-read
